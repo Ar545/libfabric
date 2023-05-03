@@ -410,16 +410,20 @@ int ofi_check_fabric_attr(const struct fi_provider *prov,
 		FI_INFO(prov, FI_LOG_CORE,
 			"Requesting provider %s, skipping %s\n",
 			user_attr->prov_name, prov_attr->prov_name);
+		printf("Requesting provider %s, skipping %s\n",
+			user_attr->prov_name, prov_attr->prov_name);
 		return -FI_ENODATA;
 	}
 
 	if (user_attr->prov_version > prov_attr->prov_version) {
 		FI_INFO(prov, FI_LOG_CORE, "Unsupported provider version\n");
+		printf("Unsupported provider version\n");
 		return -FI_ENODATA;
 	}
 
 	if (FI_VERSION_LT(user_attr->api_version, prov_attr->api_version)) {
 		FI_INFO(prov, FI_LOG_CORE, "Unsupported api version\n");
+		printf("Unsupported api version\n");
 		return -FI_ENODATA;
 	}
 

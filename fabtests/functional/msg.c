@@ -42,6 +42,7 @@ static int run(void)
 
 	if (!opts.dst_addr) {
 		ret = ft_start_server();
+		printf("api version is %d \n", fi_pep->fabric_attr->api_version);
 		if (ret)
 			return ret;
 	}

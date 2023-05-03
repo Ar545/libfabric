@@ -526,8 +526,12 @@ int dpdk_create_fabric(struct fi_fabric_attr *attr, struct fid_fabric **fabric_f
 
     ret = ofi_fabric_init(&dpdk_prov, dpdk_util_prov.info->fabric_attr, attr, &fabric->util_fabric,
                           context);
-    if (ret)
+    if (ret) {
+        printf("dpdk api version is %d; ", dpdk_util_prov.info->fabric_attr->api_version);
+        printf("application api version is %d; ", attr->api_version);
+    	printf("debug in dpdk_fabric %d \n", ret);
         goto free;
+    }
 
     fabric->util_fabric.fabric_fid.fid.ops = &dpdk_fabric_fi_ops;
     fabric->util_fabric.fabric_fid.ops     = &dpdk_fabric_ops;

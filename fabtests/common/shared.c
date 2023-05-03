@@ -1971,6 +1971,7 @@ int ft_progress(struct fid_cq *cq, uint64_t total, uint64_t *cq_cntr)
 		seq++;								\
 	} while (0)
 
+/** send data */
 ssize_t ft_post_tx_buf(struct fid_ep *ep, fi_addr_t fi_addr, size_t size,
 		       uint64_t data, void *ctx,
 		       void *op_buf, void *op_mr_desc, uint64_t op_tag)
@@ -1979,24 +1980,49 @@ ssize_t ft_post_tx_buf(struct fid_ep *ep, fi_addr_t fi_addr, size_t size,
 	if (hints->caps & FI_TAGGED) {
 		op_tag = op_tag ? op_tag : tx_seq;
 		if (data != NO_CQ_DATA) {
+			printf("case A\n");
 			FT_POST(fi_tsenddata, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, op_buf, size,
 				op_mr_desc, data, fi_addr, op_tag, ctx);
 		} else {
+			printf("case B\n");
 			FT_POST(fi_tsend, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, op_buf, size,
 				op_mr_desc, fi_addr, op_tag, ctx);
 		}
 	} else {
 		if (data != NO_CQ_DATA) {
+			printf("case C\n");
 			FT_POST(fi_senddata, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, op_buf, size,
 				op_mr_desc, data, fi_addr, ctx);
 
 		} else {
-			FT_POST(fi_send, ft_progress, txcq, tx_seq,
-				&tx_cq_cntr, "transmit", ep, op_buf, size,
-				op_mr_desc, fi_addr, ctx);
+			/** TEST SEND BEGIN **/
+			// printf("fi_send function called\n");
+			// FT_POST(fi_send, ft_progress, txcq, tx_seq,
+			// 	&tx_cq_cntr, "transmit", ep, op_buf, size,
+			// 	op_mr_desc, fi_addr, ctx);
+			/** test SEND end **/
+
+			/** TEST SENDMSG begin **/	
+			printf("fi_sendmsg function called\n");		
+			struct fi_msg msg;
+			struct iovec  msg_iov;
+			msg_iov.iov_base = op_buf;
+			msg_iov.iov_len  = size;
+			msg.msg_iov      = &msg_iov;
+			msg.iov_count    = 1;
+			msg.desc         = &op_mr_desc;
+			msg.addr         = fi_addr; // this is ignored in the currendly DPDK impl.
+			msg.context      = ctx; 
+
+			msg.data		 = 601; /** test my imm data */
+
+			FT_POST(fi_sendmsg, ft_progress, txcq, tx_seq,
+				&tx_cq_cntr, "transmit", ep, &msg, 0);
+			printf("my imm data to send is %d\n", msg.data);
+			/** END TEST MSG **/
 		}
 	}
 	return 0;
@@ -2009,6 +2035,7 @@ ssize_t ft_post_tx(struct fid_ep *ep, fi_addr_t fi_addr, size_t size,
 			      ctx, tx_buf, mr_desc, ft_tag);
 }
 
+/** send buffer */
 ssize_t ft_tx(struct fid_ep *ep, fi_addr_t fi_addr, size_t size, void *ctx)
 {
 	ssize_t ret;
@@ -2250,8 +2277,27 @@ ssize_t ft_post_rx_buf(struct fid_ep *ep, size_t size, void *ctx,
 			"receive", ep, op_buf, size, op_mr_desc,
 			remote_fi_addr, op_tag, 0, ctx);
 	} else {
-		FT_POST(fi_recv, ft_progress, rxcq, rx_seq, &rx_cq_cntr,
-			"receive", ep, op_buf, size, op_mr_desc, remote_fi_addr, ctx);
+		/** FI_recv BEGIN */
+		// FT_POST(fi_recv, ft_progress, rxcq, rx_seq, &rx_cq_cntr,
+		// 	"receive", ep, op_buf, size, op_mr_desc, remote_fi_addr, ctx);
+		/** FI_recv END */
+
+		/** receive msg BEGIN  */
+		struct fi_msg msg;
+		struct iovec  msg_iov;
+
+		msg_iov.iov_base = buf;
+		msg_iov.iov_len  = size;
+		msg.msg_iov      = &msg_iov;
+		msg.iov_count    = 1;
+		msg.desc         = &op_mr_desc;
+		msg.addr         = remote_fi_addr; // this is ignored in the currendly DPDK impl.
+		msg.context      = ctx;
+
+		FT_POST(fi_recvmsg, ft_progress, rxcq, rx_seq, &rx_cq_cntr,
+			"receive", ep, &msg, 0);
+		printf("fi_recvmsg, msg.data is %d\n", msg.data);
+		/** receive msg END  */
 	}
 	return 0;
 }
@@ -2405,6 +2451,7 @@ static int ft_fdwait_for_comp(struct fid_cq *cq, uint64_t *cur,
 	return 0;
 }
 
+/** receive **/
 int ft_get_cq_comp(struct fid_cq *cq, uint64_t *cur, uint64_t total, int timeout)
 {
 	int ret;
@@ -2412,12 +2459,15 @@ int ft_get_cq_comp(struct fid_cq *cq, uint64_t *cur, uint64_t total, int timeout
 	case FT_COMP_SREAD:
 	case FT_COMP_YIELD:
 		ret = ft_wait_for_comp(cq, cur, total, timeout);
+		printf("case FT_COMP_YIELD or FT_COMP_SREAD \n");
 		break;
 	case FT_COMP_WAIT_FD:
 		ret = ft_fdwait_for_comp(cq, cur, total, timeout);
+		printf("case FT_COMP_WAIT_FD \n");
 		break;
 	default:
 		ret = ft_spin_for_comp(cq, cur, total, timeout);
+		printf("case default (ft_spin_for_comp) \n");
 		break;
 	}
 
@@ -2492,13 +2542,16 @@ static int ft_get_cntr_comp(struct fid_cntr *cntr, uint64_t total, int timeout)
 	return ret;
 }
 
+/**?*/
 int ft_get_rx_comp(uint64_t total)
 {
 	int ret = FI_SUCCESS;
 
 	if (opts.options & FT_OPT_RX_CQ) {
+		printf("receive (ft_get_cq_comp)\n");
 		ret = ft_get_cq_comp(rxcq, &rx_cq_cntr, total, timeout);
 	} else if (rxcntr) {
+		printf("receive case B\n");
 		ret = ft_get_cntr_comp(rxcntr, total, timeout);
 	} else {
 		FT_ERR("Trying to get a RX completion when no RX CQ or counter were opened");
@@ -2601,6 +2654,7 @@ int ft_recvmsg(struct fid_ep *ep, fi_addr_t fi_addr,
 		msg.context = ctx;
 
 		ret = fi_recvmsg(ep, &msg, flags);
+		printf("unused - msg.data imm: %d", msg.data);
 		if (ret) {
 			FT_PRINTERR("fi_recvmsg", ret);
 			return ret;
