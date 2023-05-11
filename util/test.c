@@ -499,6 +499,8 @@ void do_client(const char *server_ip_and_port) {
     msg.data         = 0;
     msg.msg_iov      = &msg_iov;
 
+    int round = 0;
+
     // Send message
     char input[32];
     printf("Insert a message size: ");
@@ -518,13 +520,26 @@ void do_client(const char *server_ip_and_port) {
         // Fill the buffer with random content
         memset(g_mr.buffer, 'a', msg_iov.iov_len);
 
-        // Post a send request
-        ret = fi_sendmsg(ep, &msg, FI_COMPLETION);
-        if (ret) {
-            printf("fi_sendmsg() failed: %s\n", fi_strerror(-ret));
-            printf("Insert a message size: ");
-            continue;
+        if(round % 3 != 2){
+            /* test my imm data */
+            msg.data = 601; 
+            // Post a send request
+            ret = fi_sendmsg(ep, &msg, FI_COMPLETION);
+            if (ret) {
+                printf("fi_sendmsg() failed: %s\n", fi_strerror(-ret));
+                printf("Insert a message size: ");
+                continue;
+            }
+        } else {
+            ret = fi_senddata(ep, msg_iov.iov_base, msg_iov.iov_len, 
+                msg.desc, msg.data, msg.addr, FI_COMPLETION);
+            if (ret) {
+                printf("fi_senddata() failed: %s\n", fi_strerror(-ret));
+                printf("Insert a message size: ");
+                continue;
+            }
         }
+        round ++;
 
         // Get send completion.
         // TODO-1: Check what exactly we are receiving!

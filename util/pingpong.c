@@ -1220,13 +1220,33 @@ static int pp_get_tx_comp(struct ct_pingpong *ct, uint64_t total)
 		seq++;                                                         \
 	} while (0)
 
+/** SEND TX */
 static ssize_t pp_post_tx(struct ct_pingpong *ct, struct fid_ep *ep, size_t size,
 			  void *ctx)
 {
-	if (!(ct->fi->caps & FI_TAGGED))
-		PP_POST(fi_send, pp_get_tx_comp, ct->tx_seq, "transmit", ep,
-			ct->tx_buf, size, fi_mr_desc(ct->mr),
-			ct->remote_fi_addr, ctx);
+	if (!(ct->fi->caps & FI_TAGGED)) {
+		// PP_POST(fi_send, pp_get_tx_comp, ct->tx_seq, "transmit", ep,
+		// 	ct->tx_buf, size, fi_mr_desc(ct->mr),
+		// 	ct->remote_fi_addr, ctx);
+
+		/** TEST SENDMSG begin **/	
+		printf("fi_sendmsg function called\n");		
+		struct fi_msg msg;
+		struct iovec  msg_iov;
+		msg_iov.iov_base = ct->tx_buf;
+		msg_iov.iov_len  = size;
+		msg.msg_iov      = &msg_iov;
+		msg.iov_count    = 1;
+		msg.desc         = fi_mr_desc(ct->mr);
+		msg.addr         = ct->remote_fi_addr; // this is ignored in the currendly DPDK impl.
+		msg.context      = ctx; 
+
+		msg.data		 = 601; /** test my imm data */
+
+		PP_POST(fi_sendmsg, pp_get_tx_comp, ct->tx_seq, "transmit", ep, &msg, 0);
+		printf("pingpong, pp_post_tx, my imm data to send is %ld\n", msg.data);
+		/** END TEST MSG **/
+	}
 	else
 		PP_POST(fi_tsend, pp_get_tx_comp, ct->tx_seq, "t-transmit", ep,
 			ct->tx_buf, size, fi_mr_desc(ct->mr),
@@ -1234,6 +1254,7 @@ static ssize_t pp_post_tx(struct ct_pingpong *ct, struct fid_ep *ep, size_t size
 	return 0;
 }
 
+/** TX! */
 static ssize_t pp_tx(struct ct_pingpong *ct, struct fid_ep *ep, size_t size)
 {
 	ssize_t ret;
@@ -1277,12 +1298,29 @@ static ssize_t pp_inject(struct ct_pingpong *ct, struct fid_ep *ep, size_t size)
 	return ret;
 }
 
+/** RECEIVE RX */
 static ssize_t pp_post_rx(struct ct_pingpong *ct, struct fid_ep *ep,
 			  size_t size, void *ctx)
 {
-	if (!(ct->fi->caps & FI_TAGGED))
-		PP_POST(fi_recv, pp_get_rx_comp, ct->rx_seq, "receive", ep,
-			ct->rx_buf, size, fi_mr_desc(ct->mr), 0, ctx);
+	if (!(ct->fi->caps & FI_TAGGED)) {
+		// PP_POST(fi_recv, pp_get_rx_comp, ct->rx_seq, "receive", ep,
+		// 	ct->rx_buf, size, fi_mr_desc(ct->mr), 0, ctx);
+		/** receive msg BEGIN  */
+		struct fi_msg msg;
+		struct iovec  msg_iov;
+
+		msg_iov.iov_base = ct->rx_buf;
+		msg_iov.iov_len  = size;
+		msg.msg_iov      = &msg_iov;
+		msg.iov_count    = 1;
+		msg.desc         = fi_mr_desc(ct->mr);
+		msg.addr         = 0; // this is ignored in the currendly DPDK impl.
+		msg.context      = ctx;
+
+		PP_POST(fi_recvmsg, pp_get_rx_comp, ct->rx_seq, "receive", ep, &msg, 0);
+		printf("pingpong, pp_post_rx, imm msg.data is %ld\n", msg.data);
+		/** receive msg END  */
+	}	
 	else
 		PP_POST(fi_trecv, pp_get_rx_comp, ct->rx_seq, "t-receive", ep,
 			ct->rx_buf, size, fi_mr_desc(ct->mr), 0, TAG, 0, ctx);
@@ -2120,7 +2158,7 @@ static void pp_parse_opts(struct ct_pingpong *ct, int op, char *optarg)
 }
 
 /*******************************************************************************
- *      PingPong core and implemenations for endpoints
+ *      PingPong core and implemenations for endpoints RX&TX
  ******************************************************************************/
 
 static int pingpong(struct ct_pingpong *ct)

@@ -2296,7 +2296,7 @@ ssize_t ft_post_rx_buf(struct fid_ep *ep, size_t size, void *ctx,
 
 		FT_POST(fi_recvmsg, ft_progress, rxcq, rx_seq, &rx_cq_cntr,
 			"receive", ep, &msg, 0);
-		printf("fi_recvmsg, msg.data is %d\n", msg.data);
+		printf("fi_recvmsg, imm msg.data is %ld\n", msg.data);
 		/** receive msg END  */
 	}
 	return 0;
