@@ -129,6 +129,7 @@ static ssize_t dpdk_recvv(struct fid_ep *ep_fid, const struct iovec *iov, void *
 }
 
 static ssize_t dpdk_sendmsg(struct fid_ep *ep_fid, const struct fi_msg *msg, uint64_t flags) {
+    printf("msg data to tx entry %u\n", msg->data);
     struct dpdk_ep         *ep;
     struct dpdk_xfer_entry *tx_entry;
     struct ee_state        *ee;

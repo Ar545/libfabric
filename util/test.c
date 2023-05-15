@@ -520,7 +520,7 @@ void do_client(const char *server_ip_and_port) {
         // Fill the buffer with random content
         memset(g_mr.buffer, 'a', msg_iov.iov_len);
 
-        if(round % 3 != 2){
+        if(round % 10 != 9){
             /* test my imm data */
             msg.data = 601; 
             // Post a send request

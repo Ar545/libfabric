@@ -2021,7 +2021,7 @@ ssize_t ft_post_tx_buf(struct fid_ep *ep, fi_addr_t fi_addr, size_t size,
 
 			FT_POST(fi_sendmsg, ft_progress, txcq, tx_seq,
 				&tx_cq_cntr, "transmit", ep, &msg, 0);
-			printf("my imm data to send is %d\n", msg.data);
+			printf("my imm data to send is %lu\n", msg.data);
 			/** END TEST MSG **/
 		}
 	}
