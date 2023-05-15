@@ -396,6 +396,7 @@ void do_server() {
 
         // Post a receive request
         ret = fi_recvmsg(ep, &msg, 0);
+        printf("TEST: message data received is %lu\n", msg.data);
         if (ret == -FI_EAGAIN) {
             usleep(100);
             continue;

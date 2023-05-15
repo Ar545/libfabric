@@ -44,6 +44,7 @@ static int32_t ep_connected(struct dpdk_ep *ep) {
 
 ///////////////////////// OPS
 static ssize_t dpdk_recvmsg(struct fid_ep *ep_fid, const struct fi_msg *msg, uint64_t flags) {
+    printf("receive msg data to Rx entry %u, %u \n", msg->data, rx_entry->imm_data);
     // This function posts a receive request to the RX queue of the endpoint
     struct dpdk_ep         *ep = container_of(ep_fid, struct dpdk_ep, util_ep.ep_fid);
     struct dpdk_xfer_entry *rx_entry;
@@ -82,6 +83,7 @@ static ssize_t dpdk_recvmsg(struct fid_ep *ep_fid, const struct fi_msg *msg, uin
     rx_entry->recv_size  = 0;
     rx_entry->input_size = 0;
     rx_entry->complete   = false;
+    rx_entry->imm_data   = (uint32_t)msg->data;
 
     FI_DBG(&dpdk_prov, FI_LOG_EP_CTRL, "Enqueue a read request for EP %u", ep->udp_port);
     ret = rte_ring_enqueue(ep->rq.ring, rx_entry);
@@ -129,6 +131,7 @@ static ssize_t dpdk_recvv(struct fid_ep *ep_fid, const struct iovec *iov, void *
 }
 
 static ssize_t dpdk_sendmsg(struct fid_ep *ep_fid, const struct fi_msg *msg, uint64_t flags) {
+    printf("msg data to tx entry %u \n", msg->data);
     struct dpdk_ep         *ep;
     struct dpdk_xfer_entry *tx_entry;
     struct ee_state        *ee;
@@ -216,20 +219,55 @@ static ssize_t dpdk_sendv(struct fid_ep *ep_fid, const struct iovec *iov, void *
 
 static ssize_t dpdk_inject(struct fid_ep *ep_fid, const void *buf, size_t len,
                            fi_addr_t dest_addr) {
-    printf("[dpdk_inject] UNIMPLEMENTED\n");
-    return len;
+    printf("[dpdk_inject] draft implementation \n");
+    /* Leo's draft */
+    struct fi_msg msg;
+    struct iovec  msg_iov;
+    msg_iov.iov_base = buf;
+    msg_iov.iov_len  = len;
+    msg.msg_iov      = &msg_iov;
+    msg.iov_count    = 1;
+    // msg.desc         = &desc;
+    msg.addr         = dest_addr; // this is ignored in the currendly DPDK impl.
+    // msg.context      = context;
+
+    return dpdk_sendmsg(ep_fid, &msg, 0);
 }
 
 static ssize_t dpdk_senddata(struct fid_ep *ep_fid, const void *buf, size_t len, void *desc,
                              uint64_t data, fi_addr_t dest_addr, void *context) {
-    printf("[dpdk_senddata] UNIMPLEMENTED\n");
-    return len;
+    printf("[dpdk_senddata] draft implementation\n");
+        /* Leo's draft */
+    struct fi_msg msg;
+    struct iovec  msg_iov;
+    msg_iov.iov_base = buf;
+    msg_iov.iov_len  = len;
+    msg.msg_iov      = &msg_iov;
+    msg.iov_count    = 1;
+    msg.desc         = &desc;
+    msg.addr         = dest_addr; // this is ignored in the currendly DPDK impl.
+    msg.context      = context;
+    msg.data         = data;
+
+    return dpdk_sendmsg(ep_fid, &msg, 0);
 }
 
 static ssize_t dpdk_injectdata(struct fid_ep *ep_fid, const void *buf, size_t len, uint64_t data,
                                fi_addr_t dest_addr) {
-    printf("[dpdk_injectdata] UNIMPLEMENTED\n");
-    return len;
+    printf("[dpdk_injectdata] draft implementation\n");
+            /* Leo's draft */
+    struct fi_msg msg;
+    struct iovec  msg_iov;
+    msg_iov.iov_base = buf;
+    msg_iov.iov_len  = len;
+    msg.msg_iov      = &msg_iov;
+    msg.iov_count    = 1;
+    // msg.desc         = &desc;
+    msg.addr         = dest_addr; // this is ignored in the currendly DPDK impl.
+    // msg.context      = context;
+    msg.data         = data;
+
+    return dpdk_sendmsg(ep_fid, &msg, 0);
 }
 
 struct fi_ops_msg dpdk_msg_ops = {
