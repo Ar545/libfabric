@@ -1801,7 +1801,7 @@ static int pp_client_connect(struct ct_pingpong *ct)
 		return ret;
 	}
 
-	/* Connect */
+	/* Connect */ //
 	rd = fi_eq_sread(ct->eq, &event, &entry, sizeof(entry), -1, 0);
 	if (rd != sizeof(entry)) {
 		pp_process_eq_err(rd, ct->eq, "fi_eq_sread");

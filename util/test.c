@@ -195,13 +195,6 @@ int lf_initialize() {
 int init_active_ep(struct fi_info *fi, struct fid_ep **ep, struct fid_eq **eq) {
     int ret;
 
-    /* Open an endpoint */
-    ret = fi_endpoint(g_ctxt.domain, fi, ep, NULL);
-    if (ret) {
-        printf("fi_endpoint() failed: %s\n", fi_strerror(-ret));
-        return ret;
-    }
-
     /* Create an event queue */
     ret = fi_eq_open(g_ctxt.fabric, &(g_ctxt.eq_attr), eq, NULL);
     if (ret) {
@@ -230,6 +223,13 @@ int init_active_ep(struct fi_info *fi, struct fid_ep **ep, struct fid_eq **eq) {
     if (!g_ctxt.tx_cq) {
         printf("Pointer to completion queue is null\n");
         return -1;
+    }
+
+    /* Open an endpoint */
+    ret = fi_endpoint(g_ctxt.domain, fi, ep, NULL);
+    if (ret) {
+        printf("fi_endpoint() failed: %s\n", fi_strerror(-ret));
+        return ret;
     }
 
     /* Bind endpoint to event queue and completion queues */
@@ -450,12 +450,14 @@ void do_client(const char *server_ip_and_port) {
         printf("failed to initialize client endpoint.\n");
         exit(2);
     }
+    printf("init_active_ep DONE \n");
 
     // Connect to the server
     struct fi_eq_cm_entry entry;
     uint32_t              event;
 
     struct addrinfo *svr_ai = parse_ip_port_string(server_ip_and_port);
+    printf("parse ip and port string DONE \n");
     if (!svr_ai) {
         fprintf(stderr, "%s cannot get server address from string:%s.\n", __func__,
                 server_ip_and_port);
@@ -465,15 +467,16 @@ void do_client(const char *server_ip_and_port) {
     sleep(3);
 
     ret = fi_connect(ep, svr_ai->ai_addr, NULL, 0);
+    printf("fi connect DONE, ret = %d \n", ret);
     if (ret) {
         printf("fi_connect() failed: %s\n", fi_strerror(-ret));
         freeaddrinfo(svr_ai);
         exit(2);
     }
-    freeaddrinfo(svr_ai);
-
+    printf("removed free addr info \n");
     // Get connection acceptance from the server
     ssize_t n_read = fi_eq_sread(eq, &event, &entry, sizeof(entry), -1, 0);
+    printf("fi_eq_sread DONE \n");
     if (n_read != sizeof(entry)) {
         fprintf(stderr, "failed to connect remote. n_read=%ld.\n", n_read);
         return;
@@ -482,6 +485,9 @@ void do_client(const char *server_ip_and_port) {
         fprintf(stderr, "fi_eq_sread() got unexpected even: %d, quitting...\n", event);
         return;
     }
+    printf("freeaddrinfo BEGIN \n");
+    freeaddrinfo(svr_ai);
+    printf("freeaddrinfo DONE \n");
     printf("Client connected!\n");
     // fflush(stdin);
     // sleep(10);

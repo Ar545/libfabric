@@ -171,15 +171,18 @@ ssize_t ofi_eq_write(struct fid_eq *eq_fid, uint32_t event,
 ssize_t ofi_eq_sread(struct fid_eq *eq_fid, uint32_t *event, void *buf,
 		     size_t len, int timeout, uint64_t flags)
 {
+	printf("ofi_eq_sread start");
 	struct util_eq *eq;
 	uint64_t endtime;
 	ssize_t ret;
 
 	eq = container_of(eq_fid, struct util_eq, eq_fid);
+	printf("ofi_eq_sread eq");
 	if (!eq->internal_wait) {
 		FI_WARN(eq->prov, FI_LOG_EQ, "EQ not configured for sread\n");
 		return -FI_ENOSYS;
 	}
+	printf("ofi_eq_sread, ret1: %d", ret);
 
 	endtime = ofi_timeout_time(timeout);
 	do {
@@ -192,6 +195,7 @@ ssize_t ofi_eq_sread(struct fid_eq *eq_fid, uint32_t *event, void *buf,
 
 		ret = fi_wait(&eq->wait->wait_fid, timeout);
 	} while (!ret);
+	printf("ofi_eq_sread, ret2: %d", ret);
 
 	return ret == -FI_ETIMEDOUT ? -FI_EAGAIN : ret;
 }
